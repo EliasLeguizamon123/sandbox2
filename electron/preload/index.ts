@@ -102,11 +102,14 @@ const api = {
         try {
             const response = await ipcRenderer.invoke('getBack');
 
+            console.log(response);
+
             window.postMessage({ channel: 'getBack', response }, '*');
         } catch (error) {
-            console.log(error);
+            console.log('preload error', error);
         }
     },
+    reconnect: () => ipcRenderer.send('reconnect'),
 };
 
 contextBridge.exposeInMainWorld('api', api);

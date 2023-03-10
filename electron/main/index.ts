@@ -1,16 +1,8 @@
 import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import { release } from 'os';
 import * as macaddress from 'macaddress';
-import * as os from 'os';
 import { join } from 'path';
-// import bonjour from 'bonjour';
 import dgram from 'dgram';
-// import net from 'net';
-// import ip from 'ip';
-// import { net } from 'electron';
-// import fetch from 'node-fetch';
-// import { exec } from 'child_process';
-// import path from 'path';
 // Disable GPU Acceleration for Windows 7
 if (release().startsWith('6.1')) app.disableHardwareAcceleration();
 
@@ -36,20 +28,10 @@ let win: BrowserWindow | null = null;
 const preload = join(__dirname, '../preload/index.js');
 const url = process.env.VITE_DEV_SERVER_URL;
 const indexHtml = join(ROOT_PATH.dist, 'index.html');
-const hostName: string = os.hostname(); //* Get Host Name
-const apiFound = false;
-let macAddress = '';
-
-// Get Mac Address
-macaddress.one((err, mac) => {
-    mac = mac.split(':').join('');
-
-    macAddress = mac;
-});
 
 async function createWindow() {
     // findApiMaster();
-    createSocket();
+    // createSocket();
     win = new BrowserWindow({
         title: 'Main window',
         icon: join(ROOT_PATH.public, 'favicon.svg'),
@@ -125,58 +107,86 @@ ipcMain.handle('open-win', (event, arg) => {
 });
 
 function createSocket() {
-    const socket = dgram.createSocket('udp4');
-    const PORT = 8080;
-    const MESSAGE = 'mcash';
+    return new Promise((resolve) => {
+        const socket = dgram.createSocket('udp4');
+        const PORT = 8080;
+        const MESSAGE = 'mcash';
 
-    socket.on('listening', () => {
-        socket.setBroadcast(true);
-        console.log('socket listening for broadcast');
-    });
-
-    socket.on('message', (message, rinfo) => {
-        console.log(
-            `received response from ${rinfo.address}:${rinfo.port}: ${message}`
-        );
-        // ipcMain.on('getBack', (event, args) => {
-        const body = {
-            ip: rinfo.address,
-            message: message.toString(),
-            port: rinfo.port,
-        };
-
-        ipcMain.handle('getBack', () => {
-            return body;
+        socket.on('listening', () => {
+            socket.setBroadcast(true);
+            console.log('socket listening for udp');
         });
-        // ipcMain.emit('getBack', body);
-        //
-        //     event.sender.send('getBack', body);
+
+        socket.on('error', () => {
+            console.log('error from socket');
+        });
+
+        socket.on('message', (message, rinfo) => {
+            console.log(
+                `received response from ${rinfo.address}:${rinfo.port}: ${message}`
+            );
+            if (message.toString() === 'mcash') {
+                const body = {
+                    ip: rinfo.address,
+                    port: rinfo.port,
+                    message: message.toString(),
+                };
+
+                socket.close();
+
+                resolve(body);
+            }
+        });
+        socket.bind();
+        // reconnectMaster();
+        // }
+        // resolve({ message: 'error', ip: '', port: '' });
+        const reconnectMaster = async (i, socket) => {
+            for (let i = 0; i <= 4; i++) {
+                if (!socket) {
+                    // break;
+                }
+                await sleep(1000);
+                socket.send(MESSAGE, PORT, '255.255.255.255', (error) => {
+                    if (error) {
+                        console.log('error: ', error);
+                    } else {
+                        console.log('message send to all ', MESSAGE);
+                    }
+                });
+                // i++;
+                // setTimeout(reconnectMaster, 1000, i + 1, socket);
+            }
+            resolve({ message: 'error', ip: '', port: '' });
+        };
+        // };
+
+        // setTimeout(reconnectMaster, 0, 0, socket);
+        reconnectMaster(0, socket);
+        // socket.closed();
+        // }
         // });
     });
-
-    socket.bind(() => {
-        socket.send(MESSAGE, PORT, '255.255.255.255', (error) => {
-            if (error) {
-                console.log('error: ', error);
-            } else {
-                console.log('message send to all');
-            }
-        });
-    });
-    setTimeout(() => {
-        socket.close();
-        console.log('connection closes');
-
-        ipcMain.on('timerEnd', (event) => {
-            const end = true;
-            const mainWindow = BrowserWindow.getFocusedWindow();
-
-            if (mainWindow) {
-                mainWindow.webContents.sendToFrame(0, 'timerEnd', end);
-            }
-        });
-    }, 5000);
 }
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+ipcMain.handle('getBack', async () => {
+    try {
+        const body = await createSocket();
+
+        console.log('body dentro de get back', body);
+
+        return body;
+    } catch (error) {
+        const body = { ip: '', port: '', message: 'error' };
+
+        return body;
+    }
+});
+
 ipcMain.on('closeApp', () => {
     app.quit();
 });

@@ -1,11 +1,8 @@
-import { VStack, HStack, Image, Text, Button } from '@chakra-ui/react';
 // import { useState } from 'react';
-import vite from '/vite.svg';
-import react from '/react.svg';
-import electron from '/electron.png';
 // import { io } from 'socket.io-client';
+import { useToast } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
-import { ipcRenderer } from 'electron';
+import Home from './pages/Home';
 
 export interface getData {
     ip: string;
@@ -14,31 +11,47 @@ export interface getData {
 }
 
 export default function App() {
-    const [data, setData] = useState<getData | undefined>(undefined);
+    const [data, setData] = useState<getData | undefined>();
+    const toast = useToast();
 
-    window.addEventListener('message', (event) => {
-        if (event.data.channel === 'getBack') {
-            console.log(event.data); // response.message
-            setData(event.data.response);
-        }
-    });
     useEffect(() => {
+        const lookingEvents = (event: MessageEvent) => {
+            if (event.data.channel === 'getBack') {
+                toast.closeAll();
+                console.log(event.data.response);
+                if (event.data.response.message === 'error') {
+                    toast({
+                        title: 'Error',
+                        description: 'No master find',
+                        status: 'error',
+                        // console.log(res)
+                        isClosable: true,
+                    });
+                } else if (event.data.response.message === 'mcash') {
+                    toast({
+                        title: 'Success',
+                        description: 'Master find correctly',
+                        status: 'success',
+                        isClosable: true,
+                    });
+                    setData(res);
+                }
+            }
+        };
+
+        toast({
+            title: 'Searching ...',
+            description: 'Locking for a master connection',
+            duration: 6000,
+            isClosable: true,
+        });
+        window.addEventListener('message', lookingEvents);
         window.api.getBack();
+
+        return () => {
+            window.removeEventListener('message', lookingEvents);
+        };
     }, []);
 
-    return (
-        <>
-            <VStack align="center" pt={12} spacing={4}>
-                <HStack>
-                    <Image alt="vite logo" boxSize="150px" src={vite} />
-                    <Image alt="vite logo" boxSize="150px" src={react} />
-                    <Image alt="vite logo" boxSize="150px" src={electron} />
-                </HStack>
-                <Text>{data !== undefined ? data.ip : 'no cargo la ip'}</Text>
-                <Text>
-                    {data !== undefined ? data.message : 'no tengo mensaje'}
-                </Text>
-            </VStack>
-        </>
-    );
+    return <Home data={data} />;
 }
