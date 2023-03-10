@@ -3,8 +3,14 @@ import { release } from 'os';
 import * as macaddress from 'macaddress';
 import * as os from 'os';
 import { join } from 'path';
-import { net } from 'electron';
-
+// import bonjour from 'bonjour';
+import dgram from 'dgram';
+// import net from 'net';
+// import ip from 'ip';
+// import { net } from 'electron';
+// import fetch from 'node-fetch';
+// import { exec } from 'child_process';
+// import path from 'path';
 // Disable GPU Acceleration for Windows 7
 if (release().startsWith('6.1')) app.disableHardwareAcceleration();
 
@@ -31,7 +37,7 @@ const preload = join(__dirname, '../preload/index.js');
 const url = process.env.VITE_DEV_SERVER_URL;
 const indexHtml = join(ROOT_PATH.dist, 'index.html');
 const hostName: string = os.hostname(); //* Get Host Name
-
+const apiFound = false;
 let macAddress = '';
 
 // Get Mac Address
@@ -42,13 +48,15 @@ macaddress.one((err, mac) => {
 });
 
 async function createWindow() {
+    // findApiMaster();
+    createSocket();
     win = new BrowserWindow({
         title: 'Main window',
         icon: join(ROOT_PATH.public, 'favicon.svg'),
         webPreferences: {
             preload,
-            nodeIntegration: true,
-            contextIsolation: false,
+            nodeIntegration: false,
+            contextIsolation: true,
         },
     });
 
@@ -116,32 +124,59 @@ ipcMain.handle('open-win', (event, arg) => {
     }
 });
 
-async function req() {
-    const request = net.request({
-        url: 'http://192.168.1.161:8000/slave-login',
-        method: 'POST',
+function createSocket() {
+    const socket = dgram.createSocket('udp4');
+    const PORT = 8080;
+    const MESSAGE = 'mcash';
+
+    socket.on('listening', () => {
+        socket.setBroadcast(true);
+        console.log('socket listening for broadcast');
     });
 
-    request.on('response', (response) => {
-        const data = [];
+    socket.on('message', (message, rinfo) => {
+        console.log(
+            `received response from ${rinfo.address}:${rinfo.port}: ${message}`
+        );
+        // ipcMain.on('getBack', (event, args) => {
+        const body = {
+            ip: rinfo.address,
+            message: message.toString(),
+            port: rinfo.port,
+        };
 
-        response.on('data', (chunk) => {
-            data.push(chunk);
+        ipcMain.handle('getBack', () => {
+            return body;
+        });
+        // ipcMain.emit('getBack', body);
+        //
+        //     event.sender.send('getBack', body);
+        // });
+    });
+
+    socket.bind(() => {
+        socket.send(MESSAGE, PORT, '255.255.255.255', (error) => {
+            if (error) {
+                console.log('error: ', error);
+            } else {
+                console.log('message send to all');
+            }
         });
     });
+    setTimeout(() => {
+        socket.close();
+        console.log('connection closes');
 
-    const body = JSON.stringify({
-        username: 'mcash',
-        password: 'mcash',
-        device_id: macAddress,
-        name: 'REDEMPTION', //can be CASHIER || REDEMPTION for the moment
-    });
+        ipcMain.on('timerEnd', (event) => {
+            const end = true;
+            const mainWindow = BrowserWindow.getFocusedWindow();
 
-    request.setHeader('Content-Type', 'application/json');
-    request.write(body, 'utf-8');
-    request.end();
+            if (mainWindow) {
+                mainWindow.webContents.sendToFrame(0, 'timerEnd', end);
+            }
+        });
+    }, 5000);
 }
-
 ipcMain.on('closeApp', () => {
     app.quit();
 });

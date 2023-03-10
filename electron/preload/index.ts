@@ -98,8 +98,15 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 const api = {
     token: (data) => ipcRenderer.on('token', data),
-    getBack: () => ipcRenderer.sendSync('getBack'),
-    closeApp: () => ipcRenderer.send('closeApp'),
+    getBack: async () => {
+        try {
+            const response = await ipcRenderer.invoke('getBack');
+
+            window.postMessage({ channel: 'getBack', response }, '*');
+        } catch (error) {
+            console.log(error);
+        }
+    },
 };
 
 contextBridge.exposeInMainWorld('api', api);

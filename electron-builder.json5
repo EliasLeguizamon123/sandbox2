@@ -6,6 +6,8 @@
   productName: "Caja MC",
   copyright: "Copyright © 2022 ${author}",
   asar: true,
+  asarUnpack: "electron/resources",
+  extraResources: ["electron/resources"],
   directories: {
     output: "release/${version}",
     buildResources: "electron/resources",

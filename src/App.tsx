@@ -1,11 +1,30 @@
-import { Button, VStack, HStack, Text, Image } from '@chakra-ui/react';
-import { useState } from 'react';
+import { VStack, HStack, Image, Text, Button } from '@chakra-ui/react';
+// import { useState } from 'react';
 import vite from '/vite.svg';
 import react from '/react.svg';
 import electron from '/electron.png';
+// import { io } from 'socket.io-client';
+import { useEffect, useState } from 'react';
+import { ipcRenderer } from 'electron';
+
+export interface getData {
+    ip: string;
+    message: string;
+    port: string;
+}
 
 export default function App() {
-    const [count, setCount] = useState(0);
+    const [data, setData] = useState<getData | undefined>(undefined);
+
+    window.addEventListener('message', (event) => {
+        if (event.data.channel === 'getBack') {
+            console.log(event.data); // response.message
+            setData(event.data.response);
+        }
+    });
+    useEffect(() => {
+        window.api.getBack();
+    }, []);
 
     return (
         <>
@@ -15,10 +34,10 @@ export default function App() {
                     <Image alt="vite logo" boxSize="150px" src={react} />
                     <Image alt="vite logo" boxSize="150px" src={electron} />
                 </HStack>
-                <Button color="blue.200" onClick={() => setCount(count + 1)}>
-                    Count
-                </Button>
-                <Text>count is {count}</Text>
+                <Text>{data !== undefined ? data.ip : 'no cargo la ip'}</Text>
+                <Text>
+                    {data !== undefined ? data.message : 'no tengo mensaje'}
+                </Text>
             </VStack>
         </>
     );
