@@ -34,7 +34,7 @@ export default function App() {
                         status: 'success',
                         isClosable: true,
                     });
-                    setData(res);
+                    setData(event.data.response);
                 }
             }
         };
