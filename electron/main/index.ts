@@ -35,6 +35,7 @@ async function createWindow() {
     win = new BrowserWindow({
         title: 'Main window',
         icon: join(ROOT_PATH.public, 'favicon.svg'),
+        show: false,
         webPreferences: {
             preload,
             nodeIntegration: false,
@@ -66,6 +67,7 @@ async function createWindow() {
 }
 
 app.whenReady().then(createWindow);
+// app.whenReady().then(createSocket);
 
 app.on('window-all-closed', () => {
     win = null;
@@ -138,9 +140,6 @@ function createSocket() {
             }
         });
         socket.bind();
-        // reconnectMaster();
-        // }
-        // resolve({ message: 'error', ip: '', port: '' });
         const reconnectMaster = async (i, socket) => {
             for (let i = 0; i <= 4; i++) {
                 if (!socket) {
@@ -152,20 +151,15 @@ function createSocket() {
                         console.log('error: ', error);
                     } else {
                         console.log('message send to all ', MESSAGE);
+                        win.show();
                     }
                 });
-                // i++;
-                // setTimeout(reconnectMaster, 1000, i + 1, socket);
             }
             resolve({ message: 'error', ip: '', port: '' });
         };
-        // };
 
-        // setTimeout(reconnectMaster, 0, 0, socket);
         reconnectMaster(0, socket);
-        // socket.closed();
-        // }
-        // });
+        // win.show();
     });
 }
 
@@ -177,11 +171,13 @@ ipcMain.handle('getBack', async () => {
     try {
         const body = await createSocket();
 
-        console.log('body dentro de get back', body);
+        // win.show();
 
         return body;
     } catch (error) {
         const body = { ip: '', port: '', message: 'error' };
+
+        // win.show();
 
         return body;
     }
