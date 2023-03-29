@@ -68,7 +68,7 @@ async function createWindow() {
 
 app.whenReady().then(createWindow);
 // app.whenReady().then(createSocket);
-
+app.disableHardwareAcceleration();
 app.on('window-all-closed', () => {
     win = null;
     if (process.platform !== 'darwin') app.quit();
@@ -185,4 +185,20 @@ ipcMain.handle('getBack', async () => {
 
 ipcMain.on('closeApp', () => {
     app.quit();
+});
+
+ipcMain.on('print', () => {
+    const win = BrowserWindow.getFocusedWindow();
+    const options = {
+        silent: false,
+        printBackground: true,
+        color: false,
+        copies: 1,
+    };
+
+    win.webContents.print(options, (success, error) => {
+        if (!success) console.log(error);
+
+        console.log('inicio impresion');
+    });
 });

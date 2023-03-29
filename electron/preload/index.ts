@@ -98,6 +98,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 const api = {
     token: (data) => ipcRenderer.on('token', data),
+    print: () => ipcRenderer.send('print'),
     getBack: async () => {
         try {
             const response = await ipcRenderer.invoke('getBack');

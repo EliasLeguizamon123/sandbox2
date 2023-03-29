@@ -2,8 +2,8 @@
  * @see https://www.electron.build/configuration/configuration
  */
 {
-  appId: "com.caja.mc",
-  productName: "Caja MC",
+  appId: "com.sandbox.mc",
+  productName: "Sandbox",
   copyright: "Copyright © 2022 ${author}",
   asar: true,
   asarUnpack: "electron/resources",
